@@ -2,20 +2,21 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-box-seam"></i> Inventario & Kardex</h2>
+    <h2><i class="bi bi-box-seam"></i> Inventario Qantaty</h2>
     <a href="{{ url_for('inventory.agregar') }}" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> Crear Nuevo Item
+        <i class="bi bi-plus-lg"></i> Nuevo Item
     </a>
 </div>
 
 <div class="card shadow">
     <div class="card-body">
-        <table class="table table-hover align-middle">
+        <table class="table align-middle table-hover">
             <thead class="table-dark">
                 <tr>
+                    <th>Código</th>
                     <th>Item</th>
                     <th>Categoría</th>
-                    <th>Stock Actual</th>
+                    <th class="text-center">Stock</th>
                     <th>Acciones Rápidas</th>
                     <th>Historial</th>
                 </tr>
@@ -23,30 +24,31 @@
             <tbody>
                 {% for item in insumos %}
                 <tr>
+                    <td>{{ item.codigo }}</td>
                     <td>
                         <strong>{{ item.nombre }}</strong><br>
-                        <small class="text-muted">{{ item.codigo }}</small>
+                        <small class="text-muted">{{ item.ubicacion }}</small>
                     </td>
                     <td><span class="badge bg-secondary">{{ item.categoria }}</span></td>
-                    <td>
-                        <h4 class="m-0 
-                            {% if item.cantidad_actual < 10 %}text-danger{% else %}text-success{% endif %}">
+                    <td class="text-center">
+                        <h4 class="m-0 {% if item.cantidad_actual < 5 %}text-danger{% else %}text-success{% endif %}">
                             {{ item.cantidad_actual }} <small class="fs-6">{{ item.unidad }}</small>
                         </h4>
                     </td>
                     <td>
-                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalMovimiento" 
-                                onclick="configurarModal('{{ item.id }}', '{{ item.nombre }}', 'ENTRADA')">
-                            <i class="bi bi-plus-lg"></i> Ingreso
+                        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalMov" 
+                                onclick="setupModal('{{ item.id }}', '{{ item.nombre }}', 'ENTRADA')">
+                            Ingreso (+)
                         </button>
-                        
-                        <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalMovimiento"
-                                onclick="configurarModal('{{ item.id }}', '{{ item.nombre }}', 'SALIDA')">
-                            <i class="bi bi-dash-lg"></i> Salida
+                        <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalMov"
+                                onclick="setupModal('{{ item.id }}', '{{ item.nombre }}', 'SALIDA')">
+                            Salida (-)
                         </button>
                     </td>
                     <td>
-                        <a href="#" class="btn btn-outline-info btn-sm">Ver Kardex</a>
+                        <a href="{{ url_for('inventory.ver_kardex', id=item.id) }}" class="btn btn-outline-info btn-sm">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> Ver Kardex
+                        </a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -55,17 +57,17 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalMovimiento" tabindex="-1">
+<div class="modal fade" id="modalMov" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <form action="{{ url_for('inventory.movimiento') }}" method="POST">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitulo">Registrar Movimiento</h5>
+                    <h5 class="modal-title" id="modalTitle">Registro</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" name="insumo_id" id="insumoIdInput">
-                    <input type="hidden" name="tipo" id="tipoInput">
+                    <input type="hidden" name="insumo_id" id="inputId">
+                    <input type="hidden" name="tipo" id="inputTipo">
                     
                     <div class="mb-3">
                         <label class="form-label">Cantidad</label>
@@ -73,12 +75,12 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Motivo / Referencia</label>
-                        <input type="text" name="motivo" class="form-control" placeholder="Ej: Factura Compra #554 ó Entrega Turno Noche" required>
+                        <input type="text" name="motivo" class="form-control" placeholder="Ej: Factura 001 / Entrega a Juan" required>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Confirmar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
         </div>
@@ -86,18 +88,12 @@
 </div>
 
 <script>
-    function configurarModal(id, nombre, tipo) {
-        document.getElementById('insumoIdInput').value = id;
-        document.getElementById('tipoInput').value = tipo;
+    function setupModal(id, nombre, tipo) {
+        document.getElementById('inputId').value = id;
+        document.getElementById('inputTipo').value = tipo;
         
-        const titulo = document.getElementById('modalTitulo');
-        if (tipo === 'ENTRADA') {
-            titulo.innerText = '🟢 Recibir Stock: ' + nombre;
-            titulo.className = 'modal-title text-success';
-        } else {
-            titulo.innerText = '🔴 Despachar Stock: ' + nombre;
-            titulo.className = 'modal-title text-danger';
-        }
+        const titulo = document.getElementById('modalTitle');
+        titulo.innerText = (tipo === 'ENTRADA' ? '🟢 Recibir: ' : '🔴 Despachar: ') + nombre;
     }
 </script>
 {% endblock %}
