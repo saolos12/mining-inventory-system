@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{{ url_for('inventory.lista') }}" class="btn btn-outline-secondary mb-2">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+            <h2>{{ insumo.nombre }}</h2>
+            <p class="text-muted">Código: {{ insumo.codigo }} | Ubicación: {{ insumo.ubicacion }}</p>
+        </div>
+        <a href="{{ url_for('inventory.descargar_kardex_pdf', id=insumo.id) }}" class="btn btn-danger btn-lg">
+            <i class="bi bi-file-pdf"></i> PDF Historial
+        </a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-primary mb-3">
+                <div class="card-body text-center d-flex justify-content-around align-items-center">
+                    <div>
+                        <h5 class="text-muted">Stock Disponible</h5>
+                        <h1 class="display-3 fw-bold">{{ insumo.cantidad_actual }}</h1>
+                        <span class="badge bg-primary">{{ insumo.unidad }}</span>
+                    </div>
+                    <div class="text-start border-start ps-4">
+                        <p><strong>Categoría:</strong> {{ insumo.categoria }}</p>
+                        <p><strong>Observaciones:</strong> {{ insumo.observaciones or 'Ninguna' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white">
+            <i class="bi bi-clock-history"></i> Historial de Movimientos
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Motivo</th>
+                        <th class="text-end">Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mov in movimientos %}
+                    <tr>
+                        <td>{{ mov.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            {% if mov.tipo == 'ENTRADA' %}
+                                <span class="badge bg-success">ENTRADA</span>
+                            {% else %}
+                                <span class="badge bg-danger">SALIDA</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ mov.motivo }}</td>
+                        <td class="text-end fw-bold">
+                            {% if mov.tipo == 'ENTRADA' %}
+                                +{{ mov.cantidad }}
+                            {% else %}
+                                -{{ mov.cantidad }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4">Sin movimientos aún.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
