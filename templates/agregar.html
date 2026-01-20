@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4>{{ accion }} Insumo</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label class="form-label">Nombre del Item</label>
+                            <input type="text" name="nombre" class="form-control" value="{{ insumo.nombre if insumo else '' }}" required>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Código Interno</label>
+                            <input type="text" name="codigo" class="form-control" value="{{ insumo.codigo_interno if insumo else '' }}">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label class="form-label">Categoría</label>
+                            <select name="categoria" class="form-select" required>
+                                <option value="Herramientas" {% if insumo and insumo.categoria == 'Herramientas' %}selected{% endif %}>Herramientas</option>
+                                <option value="Explosivos" {% if insumo and insumo.categoria == 'Explosivos' %}selected{% endif %}>Explosivos</option>
+                                <option value="EPP" {% if insumo and insumo.categoria == 'EPP' %}selected{% endif %}>EPP (Seguridad)</option>
+                                <option value="Repuestos" {% if insumo and insumo.categoria == 'Repuestos' %}selected{% endif %}>Repuestos</option>
+                                <option value="Otros" {% if insumo and insumo.categoria == 'Otros' %}selected{% endif %}>Otros</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Ubicación</label>
+                            <input type="text" name="ubicacion" class="form-control" placeholder="Ej: Socavón 2" value="{{ insumo.ubicacion if insumo else '' }}">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label class="form-label">Cantidad</label>
+                            <input type="number" name="cantidad" class="form-control" value="{{ insumo.cantidad if insumo else '' }}" required>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Unidad de Medida</label>
+                            <input type="text" name="unidad" class="form-control" placeholder="Ej: Kilos, Cajas" value="{{ insumo.unidad if insumo else 'Unidades' }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="3">{{ insumo.observaciones if insumo else '' }}</textarea>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">Guardar Insumo</button>
+                        <a href="{{ url_for('inventory.lista') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

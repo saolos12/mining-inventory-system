@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Inventario Actual</h2>
+    
+    <form class="d-flex" action="{{ url_for('inventory.lista') }}" method="GET">
+        <select name="categoria" class="form-select me-2">
+            <option value="Todas">Todas las categorías</option>
+            {% for cat in categorias %}
+                <option value="{{ cat[0] }}">{{ cat[0] }}</option>
+            {% endfor %}
+        </select>
+        <input class="form-control me-2" type="search" placeholder="Buscar nombre..." name="search">
+        <button class="btn btn-outline-success" type="submit">Filtrar</button>
+    </form>
+</div>
+
+<table class="table table-hover table-bordered shadow-sm bg-white">
+    <thead class="table-dark">
+        <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Ubicación</th>
+            <th>Cantidad</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for insumo in insumos %}
+        <tr>
+            <td>{{ insumo.codigo_interno }}</td>
+            <td>
+                <strong>{{ insumo.nombre }}</strong>
+                {% if insumo.observaciones %}
+                <br><small class="text-muted"><i class="bi bi-info-circle"></i> {{ insumo.observaciones }}</small>
+                {% endif %}
+            </td>
+            <td><span class="badge bg-secondary">{{ insumo.categoria }}</span></td>
+            <td>{{ insumo.ubicacion }}</td>
+            <td>{{ insumo.cantidad }} {{ insumo.unidad }}</td>
+            <td>{{ insumo.estado }}</td>
+            <td>
+                <a href="{{ url_for('inventory.editar', id=insumo.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-pencil"></i></a>
+                <a href="{{ url_for('inventory.eliminar', id=insumo.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Seguro que quieres eliminar este item?')"><i class="bi bi-trash"></i></a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

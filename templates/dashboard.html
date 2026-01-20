@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-4">Panel General</h2>
+
+<div class="row text-center mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Unidades</h5>
+                <p class="display-4">{{ total_items }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Tipos de Items</h5>
+                <p class="display-4">{{ total_registros }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Categorías</h5>
+                <p class="display-4">{{ total_categorias }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Alertas Stock</h5>
+                <p class="display-4">{{ alertas_bajas }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Resumen por Categoría</div>
+            <ul class="list-group list-group-flush">
+                {% for cat, cant in datos_categoria %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ cat }}
+                    <span class="badge bg-primary rounded-pill">{{ cant }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container text-center mt-5">
+    <h2>Generación de Reportes</h2>
+    <p class="lead text-muted">Selecciona los filtros para descargar el PDF oficial de la mina.</p>
+    
+    <div class="card shadow p-4 mt-4 mx-auto" style="max-width: 500px;">
+        <form action="{{ url_for('reports.generar_pdf') }}" method="POST">
+            <div class="mb-3 text-start">
+                <label class="form-label">Filtrar por Categoría:</label>
+                <select name="categoria" class="form-select">
+                    <option value="Todas">Todas</option>
+                    <option value="Explosivos">Explosivos</option>
+                    <option value="Herramientas">Herramientas</option>
+                    <option value="EPP">EPP</option>
+                </select>
+            </div>
+            
+            <div class="mb-3 text-start">
+                <label class="form-label">Filtrar por Ubicación (Opcional):</label>
+                <input type="text" name="ubicacion" class="form-control" placeholder="Escribe ubicación exacta o deja vacío">
+            </div>
+
+            <button type="submit" class="btn btn-danger btn-lg w-100">
+                <i class="bi bi-file-earmark-pdf"></i> Descargar PDF
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
