@@ -1,102 +1,67 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from models.insumo import Insumo, db
+from models.insumo import Insumo, Movimiento, db
 
 inventory_bp = Blueprint('inventory', __name__)
 
-# --- LISTAR ---
+# --- 1. LISTAR INVENTARIO ---
 @inventory_bp.route('/inventario')
 def lista():
-    search = request.args.get('search')
-    filtro_cat = request.args.get('categoria')
-    
-    query = Insumo.query
-    
-    # Filtros dinámicos
-    if search:
-        query = query.filter(Insumo.nombre.ilike(f'%{search}%'))
-    if filtro_cat and filtro_cat != "Todas":
-        query = query.filter_by(categoria=filtro_cat)
-        
-    insumos = query.order_by(Insumo.id.desc()).all()
-    
-    # Obtener categorías únicas para el dropdown de filtro
-    categorias = db.session.query(Insumo.categoria).distinct().all()
-    
-    return render_template('inventario.html', insumos=insumos, categorias=categorias)
+    # Buscamos todos los items ordenados del más nuevo al más viejo
+    insumos = Insumo.query.order_by(Insumo.id.desc()).all()
+    return render_template('inventario.html', insumos=insumos)
 
-# --- AGREGAR ---
+# --- 2. AGREGAR NUEVO ITEM (Catálogo) ---
 @inventory_bp.route('/agregar', methods=['GET', 'POST'])
 def agregar():
     if request.method == 'POST':
-        nuevo = Insumo(
+        # CORRECCIÓN APLICADA: Usamos 'codigo' en lugar de 'codigo_interno'
+        nuevo_insumo = Insumo(
             nombre=request.form['nombre'],
-            codigo_interno=request.form['codigo'],
+            codigo=request.form['codigo'],
             categoria=request.form['categoria'],
-            cantidad=request.form['cantidad'],
             unidad=request.form['unidad'],
             ubicacion=request.form['ubicacion'],
-            observaciones=request.form['observaciones']
+            observaciones=request.form['observaciones'],
+            cantidad_actual=0  # Empieza en 0 hasta que registres una entrada
         )
-        db.session.add(nuevo)
-        db.session.commit()
-        flash('Insumo agregado exitosamente', 'success')
-        return redirect(url_for('inventory.lista'))
+        
+        try:
+            db.session.add(nuevo_insumo)
+            db.session.commit()
+            flash('Nuevo item creado en el catálogo. Ahora registra una ENTRADA.', 'success')
+            return redirect(url_for('inventory.lista'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al guardar: {str(e)}', 'danger')
+            return render_template('agregar.html', accion="Agregar")
     
     return render_template('agregar.html', accion="Agregar")
 
-# --- EDITAR ---
-@inventory_bp.route('/editar/<int:id>', methods=['GET', 'POST'])
-def editar(id):
-    insumo = Insumo.query.get_or_404(id)
-    
-    if request.method == 'POST':
-        insumo.nombre = request.form['nombre']
-        insumo.codigo_interno = request.form['codigo']
-        insumo.categoria = request.form['categoria']
-        insumo.cantidad = request.form['cantidad']
-        insumo.unidad = request.form['unidad']
-        insumo.ubicacion = request.form['ubicacion']
-        insumo.observaciones = request.form['observaciones']
-        
-        db.session.commit()
-        flash('Insumo actualizado correctamente', 'info')
-        return redirect(url_for('inventory.lista'))
-
-    return render_template('agregar.html', accion="Editar", insumo=insumo)
-
-# --- ELIMINAR ---
-@inventory_bp.route('/eliminar/<int:id>')
-def eliminar(id):
-    insumo = Insumo.query.get_or_404(id)
-    db.session.delete(insumo)
-    db.session.commit()
-    flash('Insumo eliminado del sistema', 'warning')
-
-    return redirect(url_for('inventory.lista'))
-    # --- NUEVA RUTA: REGISTRAR MOVIMIENTO (KARDEX) ---
+# --- 3. REGISTRAR MOVIMIENTO (Kardex: Entradas/Salidas) ---
 @inventory_bp.route('/movimiento', methods=['POST'])
 def movimiento():
-    insumo_id = request.form['insumo_id']
-    tipo = request.form['tipo'] # Puede ser 'ENTRADA' o 'SALIDA'
-    cantidad = int(request.form['cantidad'])
-    motivo = request.form['motivo']
+    # Capturamos datos del Modal
+    insumo_id = request.form.get('insumo_id')
+    tipo = request.form.get('tipo') # 'ENTRADA' o 'SALIDA'
+    cantidad = int(request.form.get('cantidad'))
+    motivo = request.form.get('motivo')
     
     insumo = Insumo.query.get_or_404(insumo_id)
     
-    # Validación de Lógica Minera
+    # Lógica de Validación Minera
     if tipo == 'SALIDA':
         if insumo.cantidad_actual < cantidad:
-            flash(f'Error: No tienes suficiente stock de {insumo.nombre}. Tienes {insumo.cantidad_actual}, intentaste sacar {cantidad}.', 'danger')
+            flash(f'Error: Stock insuficiente. Tienes {insumo.cantidad_actual}, intentaste sacar {cantidad}.', 'danger')
             return redirect(url_for('inventory.lista'))
         
-        # Restar stock
+        # Restamos stock
         insumo.cantidad_actual -= cantidad
         
     elif tipo == 'ENTRADA':
-        # Sumar stock
+        # Sumamos stock
         insumo.cantidad_actual += cantidad
     
-    # Guardar en el historial (La tabla nueva)
+    # Guardamos el registro en el historial (Tabla Movimientos)
     nuevo_movimiento = Movimiento(
         insumo_id=insumo.id,
         tipo=tipo,
@@ -107,5 +72,14 @@ def movimiento():
     db.session.add(nuevo_movimiento)
     db.session.commit()
     
-    flash(f'Movimiento registrado: {tipo} de {cantidad} {insumo.unidad}', 'success')
+    flash(f'Movimiento exitoso: {tipo} de {cantidad} {insumo.unidad}', 'success')
+    return redirect(url_for('inventory.lista'))
+
+# --- 4. ELIMINAR ITEM (Opcional, pero útil) ---
+@inventory_bp.route('/eliminar/<int:id>')
+def eliminar(id):
+    insumo = Insumo.query.get_or_404(id)
+    db.session.delete(insumo)
+    db.session.commit()
+    flash('Item eliminado del sistema correctamente.', 'warning')
     return redirect(url_for('inventory.lista'))
