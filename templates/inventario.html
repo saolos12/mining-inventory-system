@@ -1,53 +1,103 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Inventario Actual</h2>
-    
-    <form class="d-flex" action="{{ url_for('inventory.lista') }}" method="GET">
-        <select name="categoria" class="form-select me-2">
-            <option value="Todas">Todas las categorías</option>
-            {% for cat in categorias %}
-                <option value="{{ cat[0] }}">{{ cat[0] }}</option>
-            {% endfor %}
-        </select>
-        <input class="form-control me-2" type="search" placeholder="Buscar nombre..." name="search">
-        <button class="btn btn-outline-success" type="submit">Filtrar</button>
-    </form>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-box-seam"></i> Inventario & Kardex</h2>
+    <a href="{{ url_for('inventory.agregar') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Crear Nuevo Item
+    </a>
 </div>
 
-<table class="table table-hover table-bordered shadow-sm bg-white">
-    <thead class="table-dark">
-        <tr>
-            <th>Código</th>
-            <th>Nombre</th>
-            <th>Categoría</th>
-            <th>Ubicación</th>
-            <th>Cantidad</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for insumo in insumos %}
-        <tr>
-            <td>{{ insumo.codigo_interno }}</td>
-            <td>
-                <strong>{{ insumo.nombre }}</strong>
-                {% if insumo.observaciones %}
-                <br><small class="text-muted"><i class="bi bi-info-circle"></i> {{ insumo.observaciones }}</small>
-                {% endif %}
-            </td>
-            <td><span class="badge bg-secondary">{{ insumo.categoria }}</span></td>
-            <td>{{ insumo.ubicacion }}</td>
-            <td>{{ insumo.cantidad }} {{ insumo.unidad }}</td>
-            <td>{{ insumo.estado }}</td>
-            <td>
-                <a href="{{ url_for('inventory.editar', id=insumo.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-pencil"></i></a>
-                <a href="{{ url_for('inventory.eliminar', id=insumo.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Seguro que quieres eliminar este item?')"><i class="bi bi-trash"></i></a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="card shadow">
+    <div class="card-body">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Item</th>
+                    <th>Categoría</th>
+                    <th>Stock Actual</th>
+                    <th>Acciones Rápidas</th>
+                    <th>Historial</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in insumos %}
+                <tr>
+                    <td>
+                        <strong>{{ item.nombre }}</strong><br>
+                        <small class="text-muted">{{ item.codigo }}</small>
+                    </td>
+                    <td><span class="badge bg-secondary">{{ item.categoria }}</span></td>
+                    <td>
+                        <h4 class="m-0 
+                            {% if item.cantidad_actual < 10 %}text-danger{% else %}text-success{% endif %}">
+                            {{ item.cantidad_actual }} <small class="fs-6">{{ item.unidad }}</small>
+                        </h4>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalMovimiento" 
+                                onclick="configurarModal('{{ item.id }}', '{{ item.nombre }}', 'ENTRADA')">
+                            <i class="bi bi-plus-lg"></i> Ingreso
+                        </button>
+                        
+                        <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalMovimiento"
+                                onclick="configurarModal('{{ item.id }}', '{{ item.nombre }}', 'SALIDA')">
+                            <i class="bi bi-dash-lg"></i> Salida
+                        </button>
+                    </td>
+                    <td>
+                        <a href="#" class="btn btn-outline-info btn-sm">Ver Kardex</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalMovimiento" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('inventory.movimiento') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitulo">Registrar Movimiento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="insumo_id" id="insumoIdInput">
+                    <input type="hidden" name="tipo" id="tipoInput">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" name="cantidad" class="form-control" required min="1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Motivo / Referencia</label>
+                        <input type="text" name="motivo" class="form-control" placeholder="Ej: Factura Compra #554 ó Entrega Turno Noche" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function configurarModal(id, nombre, tipo) {
+        document.getElementById('insumoIdInput').value = id;
+        document.getElementById('tipoInput').value = tipo;
+        
+        const titulo = document.getElementById('modalTitulo');
+        if (tipo === 'ENTRADA') {
+            titulo.innerText = '🟢 Recibir Stock: ' + nombre;
+            titulo.className = 'modal-title text-success';
+        } else {
+            titulo.innerText = '🔴 Despachar Stock: ' + nombre;
+            titulo.className = 'modal-title text-danger';
+        }
+    }
+</script>
 {% endblock %}
