@@ -71,4 +71,41 @@ def eliminar(id):
     db.session.delete(insumo)
     db.session.commit()
     flash('Insumo eliminado del sistema', 'warning')
+
+    return redirect(url_for('inventory.lista'))
+    # --- NUEVA RUTA: REGISTRAR MOVIMIENTO (KARDEX) ---
+@inventory_bp.route('/movimiento', methods=['POST'])
+def movimiento():
+    insumo_id = request.form['insumo_id']
+    tipo = request.form['tipo'] # Puede ser 'ENTRADA' o 'SALIDA'
+    cantidad = int(request.form['cantidad'])
+    motivo = request.form['motivo']
+    
+    insumo = Insumo.query.get_or_404(insumo_id)
+    
+    # Validación de Lógica Minera
+    if tipo == 'SALIDA':
+        if insumo.cantidad_actual < cantidad:
+            flash(f'Error: No tienes suficiente stock de {insumo.nombre}. Tienes {insumo.cantidad_actual}, intentaste sacar {cantidad}.', 'danger')
+            return redirect(url_for('inventory.lista'))
+        
+        # Restar stock
+        insumo.cantidad_actual -= cantidad
+        
+    elif tipo == 'ENTRADA':
+        # Sumar stock
+        insumo.cantidad_actual += cantidad
+    
+    # Guardar en el historial (La tabla nueva)
+    nuevo_movimiento = Movimiento(
+        insumo_id=insumo.id,
+        tipo=tipo,
+        cantidad=cantidad,
+        motivo=motivo
+    )
+    
+    db.session.add(nuevo_movimiento)
+    db.session.commit()
+    
+    flash(f'Movimiento registrado: {tipo} de {cantidad} {insumo.unidad}', 'success')
     return redirect(url_for('inventory.lista'))
