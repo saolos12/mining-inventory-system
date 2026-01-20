@@ -1,14 +1,12 @@
 from flask import Blueprint, render_template, request, make_response
 from models.insumo import Insumo, db
-# Importamos el motor avanzado de ReportLab (Platypus)
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER
 from datetime import datetime
 import io
-import os
 
 reports_bp = Blueprint('reports', __name__)
 
@@ -29,7 +27,7 @@ def generar_pdf():
         query = query.filter_by(categoria=categoria)
         subtitulo_texto += f" | Categoría: {categoria}"
     
-    if ubicacion and ubicacion != "Todas": # Filtro opcional si lo usas
+    if ubicacion and ubicacion != "Todas":
         query = query.filter(Insumo.ubicacion.ilike(f'%{ubicacion}%'))
         subtitulo_texto += f" | Lugar: {ubicacion}"
         
@@ -42,9 +40,7 @@ def generar_pdf():
     
     styles = getSampleStyleSheet()
     
-    # --- ENCABEZADO PERSONALIZADO ---
-    
-    # Estilo del Título Principal
+    # --- ENCABEZADO ---
     estilo_titulo = ParagraphStyle(
         name='TituloCooperativa',
         parent=styles['Heading1'],
@@ -54,44 +50,23 @@ def generar_pdf():
         spaceAfter=12
     )
     
-    # Estilo de Subtítulo/Fecha
-    estilo_sub = ParagraphStyle(
-        name='Subtitulo',
-        parent=styles['Normal'],
-        fontSize=10,
-        textColor=colors.grey,
-        alignment=TA_CENTER
-    )
-
-    # Añadir Logo (Opcional - Si tienes una imagen 'logo.png' en static/img/)
-    # ruta_logo = os.path.join('static', 'img', 'logo.png')
-    # if os.path.exists(ruta_logo):
-    #     img = Image(ruta_logo, width=50, height=50)
-    #     img.hAlign = 'CENTER'
-    #     elements.append(img)
-    
-    # Títulos
     elements.append(Paragraph("COOPERATIVA MINERA QANTATY R.L.", estilo_titulo))
-    elements.append(Paragraph(f"NIT: 1234567014 (Ejemplo) | La Paz - Bolivia", estilo_sub))
-    elements.append(Spacer(1, 10))
     elements.append(Paragraph(f"{subtitulo_texto}", styles['Heading3']))
     
     fecha_impresion = datetime.now().strftime("%d/%m/%Y %H:%M")
-    elements.append(Paragraph(f"Fecha de generación: {fecha_impresion}", styles['Normal']))
+    elements.append(Paragraph(f"Fecha de corte: {fecha_impresion}", styles['Normal']))
     elements.append(Spacer(1, 20))
     
     # --- TABLA DE DATOS ---
     
-    # Encabezados de la tabla
-    data = [['CÓDIGO', 'ITEM / DESCRIPCIÓN', 'CATEGORÍA', 'UBICACIÓN', 'STOCK', 'ESTADO']]
+    # Encabezados Actualizados
+    data = [['CÓDIGO', 'ITEM', 'CATEGORÍA', 'UBICACIÓN', 'STOCK', 'ESTADO']]
     
-    # Llenamos la tabla con los datos de la DB
-    total_items = 0
     for item in insumos:
-        # Formateamos el stock para que se vea bien (ej: 50 Kilos)
+        # Stock con unidad
         stock_fmt = f"{item.cantidad_actual} {item.unidad}"
         
-        # Recortamos textos muy largos para que no rompan la tabla
+        # Nombre corto si es muy largo
         nombre_corto = item.nombre[:25] + '...' if len(item.nombre) > 25 else item.nombre
         
         row = [
@@ -100,59 +75,65 @@ def generar_pdf():
             item.categoria,
             item.ubicacion or "N/A",
             stock_fmt,
-            # Estado (puedes ajustar lógica si tienes campo estado)
-            "OK" if item.cantidad_actual > 5 else "BAJO" 
+            item.estado # <--- AQUI YA USAMOS EL ESTADO REAL
         ]
         data.append(row)
-        total_items += item.cantidad_actual
 
-    # Creación del objeto Tabla
-    # Definimos el ancho de columnas (ajustar según necesidad)
-    table = Table(data, colWidths=[60, 180, 90, 90, 70, 50])
+    # Anchos de columna ajustados
+    table = Table(data, colWidths=[60, 150, 90, 90, 70, 80])
     
-    # ESTILOS DE LA TABLA (Aquí está la magia visual)
+    # ESTILOS BASE
     style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue), # Cabecera azul oscuro
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke), # Texto blanco en cabecera
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'), # Todo centrado
-        ('ALIGN', (1, 1), (1, -1), 'LEFT'),   # Nombres alineados a la izquierda
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), # Fuente negrita en cabecera
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12), # Espacio en cabecera
-        ('BACKGROUND', (0, 1), (-1, -1), colors.white), # Fondo blanco por defecto
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey), # Líneas grises finas
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
     ])
     
-    # Filas alternas (Efecto cebra para leer mejor)
+    # --- LÓGICA DE COLORES POR ESTADO ---
+    # Recorremos los datos (saltando la cabecera que es el índice 0)
     for i, row in enumerate(data[1:]):
-        if i % 2 == 0:
-            bg_color = colors.aliceblue # Un azul muy clarito
-        else:
-            bg_color = colors.white
-        style.add('BACKGROUND', (0, i+1), (-1, i+1), bg_color)
+        estado_actual = row[5] # El estado está en la columna 5 (índice 5)
+        fila_indice = i + 1 # Ajustamos índice porque 'data' tiene cabecera
         
-        # Si el stock es bajo (marcado como BAJO en la columna 5), poner texto rojo
-        if row[5] == "BAJO":
-             style.add('TEXTCOLOR', (4, i+1), (5, i+1), colors.red)
+        # Color de fondo alterno (Cebra)
+        if i % 2 == 0:
+            style.add('BACKGROUND', (0, fila_indice), (-1, fila_indice), colors.aliceblue)
+        
+        # Colores de Texto según Estado
+        if estado_actual == 'Dañado':
+            style.add('TEXTCOLOR', (5, fila_indice), (5, fila_indice), colors.red)
+            style.add('FONTNAME', (5, fila_indice), (5, fila_indice), 'Helvetica-Bold')
+            
+        elif estado_actual == 'En Mantenimiento':
+            style.add('TEXTCOLOR', (5, fila_indice), (5, fila_indice), colors.orange)
+            
+        elif estado_actual == 'Operativo':
+            style.add('TEXTCOLOR', (5, fila_indice), (5, fila_indice), colors.green)
+            
+        elif estado_actual == 'Regular':
+            # Un color mostaza/oscuro para regular
+            style.add('TEXTCOLOR', (5, fila_indice), (5, fila_indice), colors.darkgoldenrod)
 
     table.setStyle(style)
     elements.append(table)
     
-    # --- PIE DE PÁGINA (Resumen) ---
+    # --- PIE ---
     elements.append(Spacer(1, 20))
-    elements.append(Paragraph(f"Total de items listados: {len(insumos)} registros.", styles['Normal']))
-    
-    # Espacio para firmas (típico en cooperativas)
+    elements.append(Paragraph(f"Total registros: {len(insumos)}", styles['Normal']))
     elements.append(Spacer(1, 40))
     elements.append(Paragraph("_" * 40, styles['Normal']))
     elements.append(Paragraph("V°B° Responsable de Almacén", styles['Normal']))
 
-    # 3. Construir PDF
     doc.build(elements)
     
     buffer.seek(0)
     response = make_response(buffer.getvalue())
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'inline; filename=Reporte_Qantaty_{datetime.now().strftime("%Y%m%d")}.pdf'
+    response.headers['Content-Disposition'] = f'inline; filename=Reporte_Qantaty.pdf'
     
     return response
