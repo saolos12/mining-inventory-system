@@ -3,7 +3,6 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
-# Tabla de Productos (Catálogo)
 class Insumo(db.Model):
     __tablename__ = 'insumos'
     
@@ -15,19 +14,17 @@ class Insumo(db.Model):
     ubicacion = db.Column(db.String(100))
     observaciones = db.Column(db.Text, nullable=True)
     
-    # Stock actual (Se actualiza automáticamente con los movimientos)
-    cantidad_actual = db.Column(db.Integer, default=0)
+    # NUEVO CAMPO: Estado manual (Operativo, Dañado, etc.)
+    estado = db.Column(db.String(50), default='Operativo')
     
-    # Relación con el historial
+    cantidad_actual = db.Column(db.Integer, default=0)
     movimientos = db.relationship('Movimiento', backref='insumo', lazy=True, cascade="all, delete-orphan")
 
-# Tabla de Historial (Movimientos de Entrada/Salida)
 class Movimiento(db.Model):
     __tablename__ = 'movimientos'
-    
     id = db.Column(db.Integer, primary_key=True)
     insumo_id = db.Column(db.Integer, db.ForeignKey('insumos.id'), nullable=False)
-    tipo = db.Column(db.String(10), nullable=False) # 'ENTRADA' o 'SALIDA'
+    tipo = db.Column(db.String(10), nullable=False)
     cantidad = db.Column(db.Integer, nullable=False)
-    motivo = db.Column(db.String(200)) # Ej: Nro Factura o Nombre de quien retira
+    motivo = db.Column(db.String(200))
     fecha = db.Column(db.DateTime, default=datetime.utcnow)
