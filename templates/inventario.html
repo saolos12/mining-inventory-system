@@ -13,41 +13,54 @@
         <table class="table align-middle table-hover">
             <thead class="table-dark">
                 <tr>
-                    <th>Código</th>
                     <th>Item</th>
-                    <th>Categoría</th>
+                    <th>Estado</th>
                     <th class="text-center">Stock</th>
-                    <th>Acciones Rápidas</th>
-                    <th>Historial</th>
+                    <th>Kardex</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in insumos %}
                 <tr>
-                    <td>{{ item.codigo }}</td>
                     <td>
-                        <strong>{{ item.nombre }}</strong><br>
-                        <small class="text-muted">{{ item.ubicacion }}</small>
+                        <strong>{{ item.nombre }}</strong> <small class="text-muted">({{ item.codigo }})</small><br>
+                        <span class="badge bg-light text-dark border">{{ item.categoria }}</span>
+                        <small class="text-muted"><i class="bi bi-geo-alt"></i> {{ item.ubicacion }}</small>
                     </td>
-                    <td><span class="badge bg-secondary">{{ item.categoria }}</span></td>
+                    <td>
+                        {% if item.estado == 'Operativo' %}
+                            <span class="badge bg-success">Operativo</span>
+                        {% elif item.estado == 'Regular' %}
+                            <span class="badge bg-warning text-dark">Regular</span>
+                        {% elif item.estado == 'En Mantenimiento' %}
+                            <span class="badge bg-info text-dark">Mantenimiento</span>
+                        {% else %}
+                            <span class="badge bg-danger">Dañado</span>
+                        {% endif %}
+                    </td>
                     <td class="text-center">
-                        <h4 class="m-0 {% if item.cantidad_actual < 5 %}text-danger{% else %}text-success{% endif %}">
-                            {{ item.cantidad_actual }} <small class="fs-6">{{ item.unidad }}</small>
-                        </h4>
+                        <h4 class="m-0">{{ item.cantidad_actual }} <small class="fs-6">{{ item.unidad }}</small></h4>
                     </td>
                     <td>
-                        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalMov" 
+                        <button class="btn btn-outline-success btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#modalMov" 
                                 onclick="setupModal('{{ item.id }}', '{{ item.nombre }}', 'ENTRADA')">
-                            Ingreso (+)
+                            <i class="bi bi-plus"></i>
                         </button>
-                        <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalMov"
+                        <button class="btn btn-outline-danger btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#modalMov"
                                 onclick="setupModal('{{ item.id }}', '{{ item.nombre }}', 'SALIDA')">
-                            Salida (-)
+                            <i class="bi bi-dash"></i>
                         </button>
                     </td>
                     <td>
-                        <a href="{{ url_for('inventory.ver_kardex', id=item.id) }}" class="btn btn-outline-info btn-sm">
-                            <i class="bi bi-file-earmark-spreadsheet"></i> Ver Kardex
+                        <a href="{{ url_for('inventory.ver_kardex', id=item.id) }}" class="btn btn-info btn-sm text-white" title="Ver Historial">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{{ url_for('inventory.editar', id=item.id) }}" class="btn btn-warning btn-sm" title="Editar Estado/Detalles">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="{{ url_for('inventory.eliminar', id=item.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar item? Se borrará todo su historial.')" title="Eliminar">
+                            <i class="bi bi-trash"></i>
                         </a>
                     </td>
                 </tr>
@@ -68,18 +81,16 @@
                 <div class="modal-body">
                     <input type="hidden" name="insumo_id" id="inputId">
                     <input type="hidden" name="tipo" id="inputTipo">
-                    
                     <div class="mb-3">
-                        <label class="form-label">Cantidad</label>
+                        <label>Cantidad</label>
                         <input type="number" name="cantidad" class="form-control" required min="1">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Motivo / Referencia</label>
-                        <input type="text" name="motivo" class="form-control" placeholder="Ej: Factura 001 / Entrega a Juan" required>
+                        <label>Motivo</label>
+                        <input type="text" name="motivo" class="form-control" required>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
@@ -91,9 +102,7 @@
     function setupModal(id, nombre, tipo) {
         document.getElementById('inputId').value = id;
         document.getElementById('inputTipo').value = tipo;
-        
-        const titulo = document.getElementById('modalTitle');
-        titulo.innerText = (tipo === 'ENTRADA' ? '🟢 Recibir: ' : '🔴 Despachar: ') + nombre;
+        document.getElementById('modalTitle').innerText = (tipo === 'ENTRADA' ? '🟢 Ingreso: ' : '🔴 Salida: ') + nombre;
     }
 </script>
 {% endblock %}
